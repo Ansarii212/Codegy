@@ -86,7 +86,6 @@
     <button onclick="loadLesson('html')"><i class="fab fa-html5"></i> HTML</button>
     <button onclick="loadLesson('css')"><i class="fab fa-css3-alt"></i> CSS</button>
     <button onclick="loadLesson('javascript')"><i class="fab fa-js"></i> JavaScript</button>
-    <button onclick="loadLesson('react')"><i class="fab fa-react"></i> React</button>
     <button onclick="loadLesson('node')"><i class="fab fa-node-js"></i> Node</button>
   </div>
 
@@ -114,7 +113,6 @@
       html: [{ title: "Basic HTML", code: "<!DOCTYPE html>\n<html>\n<head>\n<title>My Page</title>\n</head>\n<body>\n<h1>Hello World!</h1>\n</body>\n</html>" }],
       css: [{ title: "Basic CSS", code: "body {\n  background-color: #f0f0f0;\n  font-family: Arial;\n}" }],
       javascript: [{ title: "Alert Example", code: "alert('Hello, JavaScript!');" }],
-      react: [{ title: "React Example", code: `ReactDOM.render(React.createElement('h1', null, 'Hello from React!'), document.getElementById('root'));` }],
       node: [{ title: "Node Example", code: "console.log('Running in Node.js');" }]
     };
 
@@ -173,10 +171,6 @@
       const htmlContent =
         currentLang === 'css' ? `<style>${code}</style>` :
         currentLang === 'javascript' ? `<script>${code}<\/script>` :
-        currentLang === 'react' ? `<div id="root"></div>
-  <script src="https://unpkg.com/react@17/umd/react.development.js"><\/script>
-  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"><\/script>
-  <script>${code}<\/script>` :
         currentLang === 'node' ? `<pre>${code}</pre>` :
         code;
       doc.open();
