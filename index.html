@@ -1,226 +1,302 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Code Editor</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>Codegy - Single Editor with Examples</title>
+<!-- FontAwesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<style>
+  html, body, #container {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: #1e1e1e;
+    color: #ddd;
+    display: flex;
+    flex-direction: column;
+  }
+  #toolbar-main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: #2d2d2d;
+    padding: 8px 10px;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  #toolbar-main button {
+    background: #3a3a3a;
+    border: none;
+    color: #eee;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+  }
+  #toolbar-main button:hover {
+    background: #575757;
+  }
 
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  #toolbar-langs {
+    display: flex;
+    gap: 8px;
+    background: #2d2d2d;
+    padding: 6px 10px;
+    justify-content: center;
+  }
+  #toolbar-langs button {
+    background: #444;
+    color: #ddd;
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+  }
+  #toolbar-langs button.active,
+  #toolbar-langs button:hover {
+    background: #007acc;
+    color: white;
+  }
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/show-hint.min.css"/>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #282c34;
-      color: white;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+  #container {
+    flex: 1 1 auto;
+    position: relative;
+  }
 
-    .controls, .language-buttons {
-      display: flex;
+  /* Remove all borders, outlines, shadows on Monaco Editor */
+  .monaco-editor, 
+  .monaco-editor-background, 
+  .margin, 
+  .monaco-scrollable-element, 
+  .lines-content, 
+  .view-lines,
+  .monaco-editor .inputarea.ime-input {
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    background: transparent !important;
+  }
+  .monaco-editor:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Style Monaco Editor font and background */
+  .monaco-editor {
+    background-color: #1e1e1e !important;
+  }
+
+  /* Result iframe */
+  #result-frame {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: white;
+    display: none;
+    z-index: 1000;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    #toolbar-main {
       justify-content: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      padding: 10px;
-      background-color: #1e1e1e;
-      flex-direction: row;
-      flex-shrink: 0;
+      padding: 6px 5px;
     }
-
-    button {
-      padding: 8px 14px;
-      font-size: 15px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: 0.3s;
-      background-color: #2c2c2c;
-      color: white;
-      box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    #toolbar-main button {
+      font-size: 12px;
+      padding: 5px 10px;
     }
-
-    button:hover {
-      background-color: #444;
-      box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+    #toolbar-langs button {
+      padding: 5px 10px;
+      font-size: 13px;
     }
-
-    .editor-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    #editor {
-      height: 50vh;
-    }
-
-    .preview {
-      height: 50vh;
-      border-top: 2px solid #444;
-      background-color: white;
-    }
-  </style>
+  }
+</style>
 </head>
 <body>
 
-  <!-- أزرار التحكم -->
-  <div class="controls">
-    <button onclick="updatePreview()"><i class="fas fa-play-circle"></i> تشغيل</button>
-    <button onclick="copyCode()"><i class="fas fa-clipboard"></i> نسخ الكود</button>
-    <button onclick="clearEditor()"><i class="fas fa-broom"></i> مسح</button>
-    <button onclick="saveAs()"><i class="fas fa-floppy-disk"></i> حفظ</button>
-    <button onclick="exportHTML()"><i class="fas fa-file-export"></i> تصدير HTML</button>
-  </div>
+<div id="toolbar-main">
+  <button id="btn-run" title="Run (Show Result)"><i class="fas fa-play"></i> Run</button>
+  <button id="btn-clear" title="Clear Editor"><i class="fas fa-trash"></i> Clear</button>
+  <button id="btn-save" title="Save Code"><i class="fas fa-save"></i> Save</button>
+  <button id="btn-export" title="Export as HTML"><i class="fas fa-file-export"></i> Export</button>
+  <button id="btn-select-all" title="Select All"><i class="fas fa-mouse-pointer"></i> Select All</button>
+  <button id="btn-hide" title="Hide Result" style="display:none"><i class="fas fa-times"></i> Close</button>
+</div>
 
-  <!-- أزرار اللغات -->
-  <div class="language-buttons">
-    <button onclick="loadLesson('html')"><i class="fab fa-html5"></i> HTML</button>
-    <button onclick="loadLesson('css')"><i class="fab fa-css3-alt"></i> CSS</button>
-    <button onclick="loadLesson('javascript')"><i class="fab fa-js"></i> JavaScript</button>
-    <button onclick="loadLesson('node')"><i class="fab fa-node-js"></i> Node</button>
-  </div>
+<div id="toolbar-langs">
+  <button id="lang-html" class="active">HTML</button>
+  <button id="lang-css">CSS</button>
+  <button id="lang-js">JavaScript</button>
+</div>
 
-  <!-- المحرر والمعاينة -->
-  <div class="editor-container">
-    <textarea id="code"></textarea>
-    <iframe class="preview"></iframe>
-  </div>
+<div id="container"></div>
 
-  <!-- Scripts -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/css/css.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/xml/xml.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/htmlmixed/htmlmixed.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/edit/closetag.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/show-hint.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/xml-hint.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/html-hint.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/css-hint.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/javascript-hint.min.js"></script>
+<iframe id="result-frame" sandbox="allow-scripts allow-same-origin"></iframe>
 
-  <script>
-    const lessonsData = {
-      html: [{ title: "Basic HTML", code: "<!DOCTYPE html>\n<html>\n<head>\n<title>My Page</title>\n</head>\n<body>\n<h1>Hello World!</h1>\n</body>\n</html>" }],
-      css: [{ title: "Basic CSS", code: "body {\n  background-color: #f0f0f0;\n  font-family: Arial;\n}" }],
-      javascript: [{ title: "Alert Example", code: "alert('Hello, JavaScript!');" }],
-      node: [{ title: "Node Example", code: "console.log('Running in Node.js');" }]
-    };
+<!-- Monaco Editor CDN -->
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
+<script>
+  require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
 
-    let currentLang = 'html';
+  let editor;
+  let currentLanguage = 'html';
 
-    const editor = CodeMirror.fromTextArea(document.getElementById('code'), {
-      lineNumbers: true,
-      theme: 'dracula',
-      mode: 'htmlmixed',
-      lineWrapping: true,
-      autoCloseTags: true,
-      extraKeys: {
-        "Ctrl-Space": "autocomplete",
-        "Tab": function(cm) {
-          if (cm.state.completionActive) {
-            cm.state.completionActive.pick();
-          } else {
-            cm.replaceSelection("  ");
-          }
-        },
-        "Enter": function(cm) {
-          if (cm.state.completionActive) {
-            cm.state.completionActive.pick();
-          } else {
-            cm.execCommand("newlineAndIndent");
-          }
-        }
-      },
-      hintOptions: {
-        completeSingle: false
-      }
-    });
-
-    editor.on("keyup", function(cm, event) {
-      const excludedKeys = ['Enter', 'Backspace', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-      if (!excludedKeys.includes(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        cm.showHint();
-      }
-    });
-
-    function loadLesson(lang) {
-      currentLang = lang;
-      const lesson = lessonsData[lang][0];
-      editor.setValue(lesson.code);
-      const mode = lang === 'html' ? 'htmlmixed' :
-                   lang === 'css' ? 'css' :
-                   'javascript';
-      editor.setOption('mode', mode);
-      updatePreview();
-    }
-
-    function updatePreview() {
-      const code = editor.getValue();
-      const iframe = document.querySelector('.preview');
-      const doc = iframe.contentDocument || iframe.contentWindow.document;
-      const htmlContent =
-        currentLang === 'css' ? `<style>${code}</style>` :
-        currentLang === 'javascript' ? `<script>${code}<\/script>` :
-        currentLang === 'node' ? `<pre>${code}</pre>` :
-        code;
-      doc.open();
-      doc.write(htmlContent);
-      doc.close();
-    }
-
-    function clearEditor() {
-      editor.setValue('');
-    }
-
-    function saveAs() {
-      const blob = new Blob([editor.getValue()], { type: "text/plain;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      const ext = currentLang === 'html' ? '.html' : currentLang === 'css' ? '.css' : '.js';
-      a.download = `code${ext}`;
-      a.click();
-    }
-
-    function exportHTML() {
-      const code = editor.getValue();
-      const fullHTML = `<!DOCTYPE html>
+  const examples = {
+    html: `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Exported Code</title>
+  <title>Example HTML</title>
 </head>
 <body>
-${code}
+  <h1 style="color: #007acc;">Welcome to HTML Example</h1>
+  <p>This is a simple HTML example.</p>
 </body>
-</html>`;
-      const blob = new Blob([fullHTML], { type: "text/html;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "exported.html";
+</html>`,
+
+    css: `/* CSS Example */
+body {
+  background-color: #f0f0f0;
+  color: #333;
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+h1 {
+  color: #007acc;
+  text-align: center;
+}
+p {
+  font-size: 16px;
+}`,
+
+    javascript: `// JavaScript Example
+function greet() {
+  alert('Hello from JavaScript!');
+}
+greet();`
+  };
+
+  require(['vs/editor/editor.main'], function () {
+    editor = monaco.editor.create(document.getElementById('container'), {
+      value: examples.html,
+      language: 'html',
+      theme: 'vs-dark',
+      automaticLayout: true,
+      minimap: { enabled: false },
+      scrollbar: { vertical: 'auto', horizontal: 'auto' },
+      suggestOnTriggerCharacters: true,
+      quickSuggestions: true,
+      wordBasedSuggestions: true,
+      fontSize: 14,
+      lineNumbers: "on",
+      overviewRulerLanes: 0,
+      glyphMargin: false,
+      folding: false,
+      lineDecorationsWidth: 0,
+      lineNumbersMinChars: 2,
+      cursorBlinking: 'smooth',
+      contextmenu: false,
+      renderLineHighlight: "none"
+    });
+  });
+
+  // Buttons handlers
+  document.getElementById('btn-run').onclick = () => {
+    const code = editor.getValue();
+    const iframe = document.getElementById('result-frame');
+    let content = '';
+    if (currentLanguage === 'html') {
+      content = code;
+    } else if (currentLanguage === 'css') {
+      content = `<style>${code}</style><div>Hello CSS applied!</div>`;
+    } else if (currentLanguage === 'javascript') {
+      content = `<script>${code}<\/script><div>JavaScript executed! Check console.</div>`;
+    }
+    iframe.style.display = 'block';
+    iframe.srcdoc = content;
+    document.getElementById('btn-hide').style.display = 'inline-flex';
+  };
+
+  document.getElementById('btn-hide').onclick = () => {
+    document.getElementById('result-frame').style.display = 'none';
+    document.getElementById('btn-hide').style.display = 'none';
+  };
+
+  document.getElementById('btn-clear').onclick = () => {
+    editor.setValue('');
+  };
+
+  document.getElementById('btn-save').onclick = () => {
+    const blob = new Blob([editor.getValue()], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `code_${currentLanguage}.${currentLanguage === 'javascript' ? 'js' : currentLanguage}`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 0);
+  };
+
+  document.getElementById('btn-export').onclick = () => {
+    if(currentLanguage === 'html'){
+      const code = editor.getValue();
+      const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'exported.html';
+      document.body.appendChild(a);
       a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 0);
+    } else {
+      alert('Export is only supported for HTML language.');
     }
+  };
 
-    function copyCode() {
-      navigator.clipboard.writeText(editor.getValue()).then(() => {
-        alert("تم نسخ الكود");
-      }).catch(err => {
-        alert("حدث خطأ أثناء النسخ");
-      });
-    }
+  document.getElementById('btn-select-all').onclick = () => {
+    editor.focus();
+    editor.setSelection({
+      startLineNumber: 1,
+      startColumn: 1,
+      endLineNumber: editor.getModel().getLineCount(),
+      endColumn: editor.getModel().getLineMaxColumn(editor.getModel().getLineCount())
+    });
+  };
 
-    // تحميل الدرس الأول عند بداية الصفحة
-    loadLesson('html');
-  </script>
+  // Language buttons
+  const langButtons = document.querySelectorAll('#toolbar-langs button');
+  langButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      langButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
 
+      let lang = btn.id.replace('lang-', '');
+      if(lang === 'js') lang = 'javascript'; // just in case
+      currentLanguage = lang;
+
+      editor.setValue(examples[lang] || '');
+      monaco.editor.setModelLanguage(editor.getModel(), lang);
+      document.getElementById('result-frame').style.display = 'none';
+      document.getElementById('btn-hide').style.display = 'none';
+      editor.focus();
+    });
+  });
+</script>
 </body>
 </html>
