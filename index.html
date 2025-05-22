@@ -3,56 +3,133 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Codegy</title>
+  <title>Codegy – Editor + Preview</title>
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <style>
     html, body {
-      margin:0; padding:0;
-      width:100%; height:100%;
-      background:#1e1e1e; color:#ddd;
-      font-family:Arial,sans-serif;
-      display:flex; flex-direction:column;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #1e1e1e;
+      color: #ddd;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-    #toolbar-main, #toolbar-langs {
-      display:flex; flex-wrap:wrap; gap:8px;
-      background:#2d2d2d; padding:8px 10px;
-      z-index:10;
+
+    /* Title */
+    #codegy-title {
+      font-size: 24px;
+      margin: 10px 0 5px 0;
+      color: #fff;
     }
-    #toolbar-main button, #toolbar-langs button {
-      background:#3a3a3a; border:none; color:#eee;
-      padding:6px 12px; border-radius:4px;
-      cursor:pointer; display:flex; align-items:center;
-      gap:6px; transition:background .2s; outline:none;
-      flex:1 1 auto;
-      font-size:14px;
+    #codegy-title .symbols {
+      color: red;
+      font-weight: bold;
     }
+
+    /* Toolbars */
+    #toolbar-main, #toolbar-extra, #toolbar-langs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: #2d2d2d;
+      padding: 8px 10px;
+      z-index: 10;
+      justify-content: center;
+      width: 100%;
+    }
+
+    #toolbar-main button,
+    #toolbar-extra button,
+    #toolbar-langs button {
+      background: #3a3a3a;
+      border: none;
+      color: #eee;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+      outline: none;
+      font-size: 14px;
+    }
+
     #toolbar-main button:hover,
+    #toolbar-extra button:hover,
     #toolbar-langs button:hover,
     #toolbar-langs button.active {
-      background:#575757; color:#fff;
+      background: #575757;
+      color: #fff;
     }
+
+    /* Editor container */
     #container {
-      flex:1; position:relative;
-      display:flex; flex-direction:column;
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
     }
+
     #editor {
-      flex:1; position:relative;
+      flex: 1;
+      position: relative;
     }
-    .monaco-editor { background:#1e1e1e!important; }
+
+    /* Monaco styling */
+    .monaco-editor,
+    .monaco-editor-background,
+    .margin,
+    .monaco-scrollable-element,
+    .lines-content,
+    .view-lines,
+    .monaco-editor .inputarea.ime-input {
+      border: none !important;
+      box-shadow: none !important;
+      outline: none !important;
+      background: transparent !important;
+    }
+
+    .monaco-editor {
+      background: #1e1e1e !important;
+    }
+
+    /* Preview */
     #result-frame {
-      position:absolute; top:0; left:0; right:0; bottom:0;
-      width:100%; height:100%; border:none;
-      background:white; display:none; z-index:5;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: white;
+      display: none;
+      z-index: 5;
     }
-    @media(max-width:600px){
-      #toolbar-main button, #toolbar-langs button {
-        font-size:12px; padding:5px 8px;
+
+    @media (max-width: 600px) {
+      #toolbar-main button,
+      #toolbar-extra button,
+      #toolbar-langs button {
+        font-size: 12px;
+        padding: 5px 8px;
       }
     }
   </style>
 </head>
 <body>
+
+  <div id="codegy-title">
+    <span class="symbols">&lt;</span> Codegy <span class="symbols">/&gt;</span>
+  </div>
 
   <div id="toolbar-main">
     <button id="btn-run"><i class="fas fa-play"></i> Run</button>
@@ -60,13 +137,14 @@
     <button id="btn-save"><i class="fas fa-save"></i> Save</button>
     <button id="btn-export"><i class="fas fa-file-export"></i> Export</button>
     <button id="btn-select-all"><i class="fas fa-mouse-pointer"></i> Select All</button>
+  </div>
 
-    <div style="width:100%; display:flex; flex-wrap:wrap; gap:8px; margin-top:5px;">
-      <button id="btn-copy"><i class="fas fa-copy"></i> Copy</button>
-      <button id="btn-paste"><i class="fas fa-paste"></i> Paste</button>
-      <button id="btn-undo"><i class="fas fa-undo"></i> Undo</button>
-      <button id="btn-redo"><i class="fas fa-redo"></i> Redo</button>
-    </div>
+  <div id="toolbar-extra">
+    <button id="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+    <button id="btn-paste"><i class="fas fa-paste"></i> Paste</button>
+    <button id="btn-undo"><i class="fas fa-undo"></i> Undo</button>
+    <button id="btn-redo"><i class="fas fa-redo"></i> Redo</button>
+    <button id="btn-share"><i class="fas fa-share-alt"></i> Share</button>
   </div>
 
   <div id="toolbar-langs">
@@ -83,132 +161,149 @@
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
   <script>
     require.config({ paths:{ vs:'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
-    let editor, currentLanguage='html', showingPreview=false;
+    let editor, currentLanguage = 'html', showingPreview = false;
     const examples = {
-      html:`<!DOCTYPE html>\n<html><body><h1>Hello HTML!</h1></body></html>`,
-      css:`body{background:lightgray;color:#333;}`,
-      javascript:`console.log('Hello JS!');`
+      html: '<!DOCTYPE html>\n<html><body><h1>Hello HTML!</h1></body></html>',
+      css: 'body{background:lightgray;color:#333;}',
+      javascript: "console.log('Hello JS!');"
     };
 
-    function getSaved(lang){
-      return localStorage.getItem('codegy_'+lang) || examples[lang];
+    function getSaved(lang) {
+      return localStorage.getItem('codegy_' + lang) || examples[lang];
     }
 
-    function autoSave(){
-      localStorage.setItem('codegy_'+currentLanguage, editor.getValue());
+    function autoSave() {
+      localStorage.setItem('codegy_' + currentLanguage, editor.getValue());
     }
 
-    require(['vs/editor/editor.main'], ()=>{
-      editor = monaco.editor.create(document.getElementById('editor'),{
-        value:getSaved(currentLanguage),
-        language:currentLanguage,
-        theme:'vs-dark',
-        automaticLayout:true,
-        minimap:{enabled:false},
-        mouseWheelZoom:true,
-        quickSuggestions:true,
-        suggestOnTriggerCharacters:true,
-        wordBasedSuggestions:true,
-        contextmenu:false,
-        lineNumbers:'on',
-        renderLineHighlight:'none',
-        fontSize:16
+    require(['vs/editor/editor.main'], () => {
+      editor = monaco.editor.create(document.getElementById('editor'), {
+        value: getSaved(currentLanguage),
+        language: currentLanguage,
+        theme: 'vs-dark',
+        automaticLayout: true,
+        minimap: { enabled: false },
+        mouseWheelZoom: true,
+        quickSuggestions: true,
+        suggestOnTriggerCharacters: true,
+        wordBasedSuggestions: true,
+        contextmenu: false,
+        lineNumbers: 'on',
+        renderLineHighlight: 'none',
+        fontSize: 16
       });
-      editor.onDidChangeModelContent(()=>{
+
+      editor.onDidChangeModelContent(() => {
         autoSave();
+        historyStack.push(editor.getValue());
       });
     });
 
-    function toggleView(){
-      const pf=document.getElementById('result-frame');
+    const historyStack = [], redoStack = [];
+
+    document.getElementById('btn-run').onclick = () => {
+      const code = editor.getValue();
+      let content = currentLanguage === 'html' ? code
+                  : currentLanguage === 'css' ? `<style>${code}</style>`
+                  : `<script>${code}<\/script>`;
+      const pf = document.getElementById('result-frame');
+      pf.srcdoc = content;
+      pf.style.display = showingPreview ? 'none' : 'block';
       showingPreview = !showingPreview;
-      if (showingPreview) {
-        let code = editor.getValue();
-        let content = currentLanguage==='html'? code
-                    : currentLanguage==='css' ? `<style>${code}</style>`
-                    : `<script>${code}<\/script>`;
-        pf.srcdoc=content;
-        pf.style.display='block';
-        document.getElementById('btn-run').innerHTML = '<i class="fas fa-code"></i> Code';
-      } else {
-        pf.style.display='none';
-        document.getElementById('btn-run').innerHTML = '<i class="fas fa-play"></i> Run';
-      }
-      editor.layout(); editor.focus();
-    }
+      editor.focus();
+      document.getElementById('btn-run').innerHTML = showingPreview
+        ? '<i class="fas fa-code"></i> Code'
+        : '<i class="fas fa-play"></i> Run';
+    };
 
-    document.getElementById('btn-run').onclick=toggleView;
-
-    document.getElementById('btn-clear').onclick=()=>{
-      if (confirm("هل تريد مسح الكود؟ يمكنك التراجع بعد ذلك.")) {
-        editor.executeEdits(null, [{
-          range: editor.getModel().getFullModelRange(),
-          text: '',
-          forceMoveMarkers: true
-        }]);
+    document.getElementById('btn-clear').onclick = () => {
+      if (confirm('Are you sure you want to clear the code?')) {
+        historyStack.push(editor.getValue());
+        editor.setValue('');
         autoSave();
       }
     };
 
-    document.getElementById('btn-save').onclick=()=>{
-      if (confirm('هل تريد حفظ الملف كـ .txt؟')) {
-        const blob=new Blob([editor.getValue()],{type:'text/plain'});
-        const a=document.createElement('a');
-        a.href=URL.createObjectURL(blob);
-        a.download=currentLanguage + '_code.txt';
+    document.getElementById('btn-save').onclick = () => {
+      if (confirm('Do you want to save this code as .txt?')) {
+        const blob = new Blob([editor.getValue()], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `codegy_${currentLanguage}.txt`;
         a.click();
       }
     };
 
-    document.getElementById('btn-export').onclick=()=>{
-      if(currentLanguage!=='html') return alert('Export only HTML');
-      const blob=new Blob([editor.getValue()],{type:'text/html'});
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob);
-      a.download='export.html'; a.click();
+    document.getElementById('btn-export').onclick = () => {
+      if (currentLanguage !== 'html') return alert('Export only works with HTML!');
+      const blob = new Blob([editor.getValue()], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'export.html';
+      a.click();
     };
 
-    document.getElementById('btn-select-all').onclick=()=>{
+    document.getElementById('btn-select-all').onclick = () => {
       editor.setSelection(editor.getModel().getFullModelRange());
     };
 
-    document.querySelectorAll('#toolbar-langs button').forEach(btn=>{
-      btn.onclick=()=>{
-        document.querySelectorAll('#toolbar-langs button').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        currentLanguage = btn.id==='lang-js'?'javascript':btn.id.replace('lang-','');
-        const val = getSaved(currentLanguage);
-        editor.setValue(val);
-        monaco.editor.setModelLanguage(editor.getModel(),currentLanguage);
-        autoSave();
-        if(showingPreview) toggleView();
-      };
-    });
-
-    document.getElementById('btn-copy').onclick = () => {
-      const text = editor.getValue();
-      navigator.clipboard.writeText(text)
-        .then(() => alert('تم النسخ!'))
-        .catch(err => alert('فشل النسخ: ' + err));
+    document.getElementById('btn-copy').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(editor.getValue());
+        alert('Code copied!');
+      } catch (err) {
+        alert('Copy failed!');
+      }
     };
 
     document.getElementById('btn-paste').onclick = async () => {
       try {
         const text = await navigator.clipboard.readText();
-        editor.setValue(text);
-        autoSave();
+        editor.trigger('keyboard', 'type', { text });
       } catch (err) {
-        alert('فشل اللصق: المتصفح منع الوصول للحافظة.\n' + err);
+        alert('Paste failed!');
       }
     };
 
     document.getElementById('btn-undo').onclick = () => {
-      editor.trigger('keyboard', 'undo', null);
+      if (historyStack.length > 0) {
+        redoStack.push(editor.getValue());
+        editor.setValue(historyStack.pop());
+      }
     };
 
     document.getElementById('btn-redo').onclick = () => {
-      editor.trigger('keyboard', 'redo', null);
+      if (redoStack.length > 0) {
+        historyStack.push(editor.getValue());
+        editor.setValue(redoStack.pop());
+      }
     };
+
+    document.getElementById('btn-share').onclick = () => {
+      const text = editor.getValue();
+      if (navigator.share) {
+        navigator.share({
+          title: 'Codegy Snippet',
+          text,
+        }).catch(err => console.error(err));
+      } else {
+        alert('Sharing not supported on this device.');
+      }
+    };
+
+    document.querySelectorAll('#toolbar-langs button').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('#toolbar-langs button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const lang = btn.textContent.toLowerCase();
+        currentLanguage = lang;
+        const value = localStorage.getItem('codegy_' + lang) || examples[lang];
+        editor.setValue(value);
+        monaco.editor.setModelLanguage(editor.getModel(), lang === 'javascript' ? 'javascript' : lang);
+        autoSave();
+        editor.focus();
+      };
+    });
   </script>
 </body>
 </html>
