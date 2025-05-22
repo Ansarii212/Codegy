@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Codegy – Editor + Preview</title>
+  <title>Codegy</title>
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <style>
@@ -14,7 +14,6 @@
       font-family:Arial,sans-serif;
       display:flex; flex-direction:column;
     }
-    /* toolbars */
     #toolbar-main, #toolbar-langs {
       display:flex; flex-wrap:wrap; gap:8px;
       background:#2d2d2d; padding:8px 10px;
@@ -33,7 +32,6 @@
     #toolbar-langs button.active {
       background:#575757; color:#fff;
     }
-    /* editor container */
     #container {
       flex:1; position:relative;
       display:flex; flex-direction:column;
@@ -41,16 +39,7 @@
     #editor {
       flex:1; position:relative;
     }
-    /* Monaco styling */
-    .monaco-editor, .monaco-editor-background,
-    .margin, .monaco-scrollable-element,
-    .lines-content, .view-lines,
-    .monaco-editor .inputarea.ime-input {
-      border:none!important; box-shadow:none!important;
-      outline:none!important; background:transparent!important;
-    }
     .monaco-editor { background:#1e1e1e!important; }
-    /* preview */
     #result-frame {
       position:absolute; top:0; left:0; right:0; bottom:0;
       width:100%; height:100%; border:none;
@@ -71,8 +60,13 @@
     <button id="btn-save"><i class="fas fa-save"></i> Save</button>
     <button id="btn-export"><i class="fas fa-file-export"></i> Export</button>
     <button id="btn-select-all"><i class="fas fa-mouse-pointer"></i> Select All</button>
-    <button id="btn-toggle"><i class="fas fa-columns"></i> Toggle View</button>
-    <button id="btn-hide"><i class="fas fa-times"></i> Close</button>
+
+    <div style="width:100%; display:flex; flex-wrap:wrap; gap:8px; margin-top:5px;">
+      <button id="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+      <button id="btn-paste"><i class="fas fa-paste"></i> Paste</button>
+      <button id="btn-undo"><i class="fas fa-undo"></i> Undo</button>
+      <button id="btn-redo"><i class="fas fa-redo"></i> Redo</button>
+    </div>
   </div>
 
   <div id="toolbar-langs">
@@ -95,12 +89,15 @@
       css:`body{background:lightgray;color:#333;}`,
       javascript:`console.log('Hello JS!');`
     };
+
     function getSaved(lang){
       return localStorage.getItem('codegy_'+lang) || examples[lang];
     }
+
     function autoSave(){
       localStorage.setItem('codegy_'+currentLanguage, editor.getValue());
     }
+
     require(['vs/editor/editor.main'], ()=>{
       editor = monaco.editor.create(document.getElementById('editor'),{
         value:getSaved(currentLanguage),
@@ -117,38 +114,50 @@
         renderLineHighlight:'none',
         fontSize:16
       });
-      editor.onDidChangeModelContent(autoSave);
+      editor.onDidChangeModelContent(()=>{
+        autoSave();
+      });
     });
 
-    function showButtons(){
-      document.querySelectorAll('#toolbar-main button').forEach(b=>b.style.display='inline-flex');
+    function toggleView(){
+      const pf=document.getElementById('result-frame');
+      showingPreview = !showingPreview;
+      if (showingPreview) {
+        let code = editor.getValue();
+        let content = currentLanguage==='html'? code
+                    : currentLanguage==='css' ? `<style>${code}</style>`
+                    : `<script>${code}<\/script>`;
+        pf.srcdoc=content;
+        pf.style.display='block';
+        document.getElementById('btn-run').innerHTML = '<i class="fas fa-code"></i> Code';
+      } else {
+        pf.style.display='none';
+        document.getElementById('btn-run').innerHTML = '<i class="fas fa-play"></i> Run';
+      }
+      editor.layout(); editor.focus();
     }
 
-    document.getElementById('btn-run').onclick=()=>{
-      const code=editor.getValue();
-      let content = currentLanguage==='html'? code
-                  : currentLanguage==='css' ? `<style>${code}</style>`
-                  : `<script>${code}<\/script>`;
-      const pf=document.getElementById('result-frame');
-      pf.srcdoc=content; pf.style.display='block';
-      showingPreview=true;
-      editor.layout(); editor.focus();
-      showButtons();
-    };
-
-    document.getElementById('btn-hide').onclick=()=>{
-      document.getElementById('result-frame').style.display='none';
-      showingPreview=false;
-      editor.layout(); editor.focus();
-      showButtons();
-    };
+    document.getElementById('btn-run').onclick=toggleView;
 
     document.getElementById('btn-clear').onclick=()=>{
-      editor.setValue(''); autoSave();
+      if (confirm("هل تريد مسح الكود؟ يمكنك التراجع بعد ذلك.")) {
+        editor.executeEdits(null, [{
+          range: editor.getModel().getFullModelRange(),
+          text: '',
+          forceMoveMarkers: true
+        }]);
+        autoSave();
+      }
     };
 
     document.getElementById('btn-save').onclick=()=>{
-      autoSave(); alert('Saved');
+      if (confirm('هل تريد حفظ الملف كـ .txt؟')) {
+        const blob=new Blob([editor.getValue()],{type:'text/plain'});
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        a.download=currentLanguage + '_code.txt';
+        a.click();
+      }
     };
 
     document.getElementById('btn-export').onclick=()=>{
@@ -163,23 +172,43 @@
       editor.setSelection(editor.getModel().getFullModelRange());
     };
 
-    document.getElementById('btn-toggle').onclick=()=>{
-      showingPreview
-        ? document.getElementById('btn-hide').click()
-        : document.getElementById('btn-run').click();
-    };
-
     document.querySelectorAll('#toolbar-langs button').forEach(btn=>{
       btn.onclick=()=>{
         document.querySelectorAll('#toolbar-langs button').forEach(b=>b.classList.remove('active'));
         btn.classList.add('active');
         currentLanguage = btn.id==='lang-js'?'javascript':btn.id.replace('lang-','');
+        const val = getSaved(currentLanguage);
+        editor.setValue(val);
         monaco.editor.setModelLanguage(editor.getModel(),currentLanguage);
-        editor.setValue(getSaved(currentLanguage));
         autoSave();
-        if(showingPreview) document.getElementById('btn-run').click();
+        if(showingPreview) toggleView();
       };
     });
+
+    document.getElementById('btn-copy').onclick = () => {
+      const text = editor.getValue();
+      navigator.clipboard.writeText(text)
+        .then(() => alert('تم النسخ!'))
+        .catch(err => alert('فشل النسخ: ' + err));
+    };
+
+    document.getElementById('btn-paste').onclick = async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        editor.setValue(text);
+        autoSave();
+      } catch (err) {
+        alert('فشل اللصق: المتصفح منع الوصول للحافظة.\n' + err);
+      }
+    };
+
+    document.getElementById('btn-undo').onclick = () => {
+      editor.trigger('keyboard', 'undo', null);
+    };
+
+    document.getElementById('btn-redo').onclick = () => {
+      editor.trigger('keyboard', 'redo', null);
+    };
   </script>
 </body>
 </html>
