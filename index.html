@@ -1,302 +1,185 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-<title>Codegy - Single Editor with Examples</title>
-<!-- FontAwesome for icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-<style>
-  html, body, #container {
-    margin: 0; padding: 0; height: 100%; width: 100%;
-    overflow: hidden;
-    font-family: Arial, sans-serif;
-    background: #1e1e1e;
-    color: #ddd;
-    display: flex;
-    flex-direction: column;
-  }
-  #toolbar-main {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    background: #2d2d2d;
-    padding: 8px 10px;
-    align-items: center;
-    justify-content: flex-start;
-  }
-  #toolbar-main button {
-    background: #3a3a3a;
-    border: none;
-    color: #eee;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: background 0.2s;
-  }
-  #toolbar-main button:hover {
-    background: #575757;
-  }
-
-  #toolbar-langs {
-    display: flex;
-    gap: 8px;
-    background: #2d2d2d;
-    padding: 6px 10px;
-    justify-content: center;
-  }
-  #toolbar-langs button {
-    background: #444;
-    color: #ddd;
-    padding: 6px 14px;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background 0.2s;
-  }
-  #toolbar-langs button.active,
-  #toolbar-langs button:hover {
-    background: #007acc;
-    color: white;
-  }
-
-  #container {
-    flex: 1 1 auto;
-    position: relative;
-  }
-
-  /* Remove all borders, outlines, shadows on Monaco Editor */
-  .monaco-editor, 
-  .monaco-editor-background, 
-  .margin, 
-  .monaco-scrollable-element, 
-  .lines-content, 
-  .view-lines,
-  .monaco-editor .inputarea.ime-input {
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-    background: transparent !important;
-  }
-  .monaco-editor:focus {
-    outline: none !important;
-    box-shadow: none !important;
-  }
-
-  /* Style Monaco Editor font and background */
-  .monaco-editor {
-    background-color: #1e1e1e !important;
-  }
-
-  /* Result iframe */
-  #result-frame {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    width: 100%;
-    height: 100%;
-    border: none;
-    background: white;
-    display: none;
-    z-index: 1000;
-  }
-
-  /* Responsive */
-  @media (max-width: 600px) {
-    #toolbar-main {
-      justify-content: center;
-      padding: 6px 5px;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Codegy – Editor + Preview</title>
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    html, body {
+      margin:0; padding:0;
+      width:100%; height:100%;
+      background:#1e1e1e; color:#ddd;
+      font-family:Arial,sans-serif;
+      display:flex; flex-direction:column;
     }
-    #toolbar-main button {
-      font-size: 12px;
-      padding: 5px 10px;
+    /* toolbars */
+    #toolbar-main, #toolbar-langs {
+      display:flex; flex-wrap:wrap; gap:8px;
+      background:#2d2d2d; padding:8px 10px;
+      z-index:10;
     }
-    #toolbar-langs button {
-      padding: 5px 10px;
-      font-size: 13px;
+    #toolbar-main button, #toolbar-langs button {
+      background:#3a3a3a; border:none; color:#eee;
+      padding:6px 12px; border-radius:4px;
+      cursor:pointer; display:flex; align-items:center;
+      gap:6px; transition:background .2s; outline:none;
+      flex:1 1 auto;
+      font-size:14px;
     }
-  }
-</style>
+    #toolbar-main button:hover,
+    #toolbar-langs button:hover,
+    #toolbar-langs button.active {
+      background:#575757; color:#fff;
+    }
+    /* editor container */
+    #container {
+      flex:1; position:relative;
+      display:flex; flex-direction:column;
+    }
+    #editor {
+      flex:1; position:relative;
+    }
+    /* Monaco styling */
+    .monaco-editor, .monaco-editor-background,
+    .margin, .monaco-scrollable-element,
+    .lines-content, .view-lines,
+    .monaco-editor .inputarea.ime-input {
+      border:none!important; box-shadow:none!important;
+      outline:none!important; background:transparent!important;
+    }
+    .monaco-editor { background:#1e1e1e!important; }
+    /* preview */
+    #result-frame {
+      position:absolute; top:0; left:0; right:0; bottom:0;
+      width:100%; height:100%; border:none;
+      background:white; display:none; z-index:5;
+    }
+    @media(max-width:600px){
+      #toolbar-main button, #toolbar-langs button {
+        font-size:12px; padding:5px 8px;
+      }
+    }
+  </style>
 </head>
 <body>
 
-<div id="toolbar-main">
-  <button id="btn-run" title="Run (Show Result)"><i class="fas fa-play"></i> Run</button>
-  <button id="btn-clear" title="Clear Editor"><i class="fas fa-trash"></i> Clear</button>
-  <button id="btn-save" title="Save Code"><i class="fas fa-save"></i> Save</button>
-  <button id="btn-export" title="Export as HTML"><i class="fas fa-file-export"></i> Export</button>
-  <button id="btn-select-all" title="Select All"><i class="fas fa-mouse-pointer"></i> Select All</button>
-  <button id="btn-hide" title="Hide Result" style="display:none"><i class="fas fa-times"></i> Close</button>
-</div>
+  <div id="toolbar-main">
+    <button id="btn-run"><i class="fas fa-play"></i> Run</button>
+    <button id="btn-clear"><i class="fas fa-trash"></i> Clear</button>
+    <button id="btn-save"><i class="fas fa-save"></i> Save</button>
+    <button id="btn-export"><i class="fas fa-file-export"></i> Export</button>
+    <button id="btn-select-all"><i class="fas fa-mouse-pointer"></i> Select All</button>
+    <button id="btn-toggle"><i class="fas fa-columns"></i> Toggle View</button>
+    <button id="btn-hide"><i class="fas fa-times"></i> Close</button>
+  </div>
 
-<div id="toolbar-langs">
-  <button id="lang-html" class="active">HTML</button>
-  <button id="lang-css">CSS</button>
-  <button id="lang-js">JavaScript</button>
-</div>
+  <div id="toolbar-langs">
+    <button id="lang-html" class="active">HTML</button>
+    <button id="lang-css">CSS</button>
+    <button id="lang-js">JavaScript</button>
+  </div>
 
-<div id="container"></div>
+  <div id="container">
+    <div id="editor"></div>
+    <iframe id="result-frame" sandbox="allow-scripts"></iframe>
+  </div>
 
-<iframe id="result-frame" sandbox="allow-scripts allow-same-origin"></iframe>
-
-<!-- Monaco Editor CDN -->
-<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
-<script>
-  require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
-
-  let editor;
-  let currentLanguage = 'html';
-
-  const examples = {
-    html: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Example HTML</title>
-</head>
-<body>
-  <h1 style="color: #007acc;">Welcome to HTML Example</h1>
-  <p>This is a simple HTML example.</p>
-</body>
-</html>`,
-
-    css: `/* CSS Example */
-body {
-  background-color: #f0f0f0;
-  color: #333;
-  font-family: Arial, sans-serif;
-  padding: 20px;
-}
-h1 {
-  color: #007acc;
-  text-align: center;
-}
-p {
-  font-size: 16px;
-}`,
-
-    javascript: `// JavaScript Example
-function greet() {
-  alert('Hello from JavaScript!');
-}
-greet();`
-  };
-
-  require(['vs/editor/editor.main'], function () {
-    editor = monaco.editor.create(document.getElementById('container'), {
-      value: examples.html,
-      language: 'html',
-      theme: 'vs-dark',
-      automaticLayout: true,
-      minimap: { enabled: false },
-      scrollbar: { vertical: 'auto', horizontal: 'auto' },
-      suggestOnTriggerCharacters: true,
-      quickSuggestions: true,
-      wordBasedSuggestions: true,
-      fontSize: 14,
-      lineNumbers: "on",
-      overviewRulerLanes: 0,
-      glyphMargin: false,
-      folding: false,
-      lineDecorationsWidth: 0,
-      lineNumbersMinChars: 2,
-      cursorBlinking: 'smooth',
-      contextmenu: false,
-      renderLineHighlight: "none"
-    });
-  });
-
-  // Buttons handlers
-  document.getElementById('btn-run').onclick = () => {
-    const code = editor.getValue();
-    const iframe = document.getElementById('result-frame');
-    let content = '';
-    if (currentLanguage === 'html') {
-      content = code;
-    } else if (currentLanguage === 'css') {
-      content = `<style>${code}</style><div>Hello CSS applied!</div>`;
-    } else if (currentLanguage === 'javascript') {
-      content = `<script>${code}<\/script><div>JavaScript executed! Check console.</div>`;
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
+  <script>
+    require.config({ paths:{ vs:'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
+    let editor, currentLanguage='html', showingPreview=false;
+    const examples = {
+      html:`<!DOCTYPE html>\n<html><body><h1>Hello HTML!</h1></body></html>`,
+      css:`body{background:lightgray;color:#333;}`,
+      javascript:`console.log('Hello JS!');`
+    };
+    function getSaved(lang){
+      return localStorage.getItem('codegy_'+lang) || examples[lang];
     }
-    iframe.style.display = 'block';
-    iframe.srcdoc = content;
-    document.getElementById('btn-hide').style.display = 'inline-flex';
-  };
-
-  document.getElementById('btn-hide').onclick = () => {
-    document.getElementById('result-frame').style.display = 'none';
-    document.getElementById('btn-hide').style.display = 'none';
-  };
-
-  document.getElementById('btn-clear').onclick = () => {
-    editor.setValue('');
-  };
-
-  document.getElementById('btn-save').onclick = () => {
-    const blob = new Blob([editor.getValue()], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `code_${currentLanguage}.${currentLanguage === 'javascript' ? 'js' : currentLanguage}`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 0);
-  };
-
-  document.getElementById('btn-export').onclick = () => {
-    if(currentLanguage === 'html'){
-      const code = editor.getValue();
-      const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'exported.html';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 0);
-    } else {
-      alert('Export is only supported for HTML language.');
+    function autoSave(){
+      localStorage.setItem('codegy_'+currentLanguage, editor.getValue());
     }
-  };
-
-  document.getElementById('btn-select-all').onclick = () => {
-    editor.focus();
-    editor.setSelection({
-      startLineNumber: 1,
-      startColumn: 1,
-      endLineNumber: editor.getModel().getLineCount(),
-      endColumn: editor.getModel().getLineMaxColumn(editor.getModel().getLineCount())
+    require(['vs/editor/editor.main'], ()=>{
+      editor = monaco.editor.create(document.getElementById('editor'),{
+        value:getSaved(currentLanguage),
+        language:currentLanguage,
+        theme:'vs-dark',
+        automaticLayout:true,
+        minimap:{enabled:false},
+        mouseWheelZoom:true,
+        quickSuggestions:true,
+        suggestOnTriggerCharacters:true,
+        wordBasedSuggestions:true,
+        contextmenu:false,
+        lineNumbers:'on',
+        renderLineHighlight:'none',
+        fontSize:16
+      });
+      editor.onDidChangeModelContent(autoSave);
     });
-  };
 
-  // Language buttons
-  const langButtons = document.querySelectorAll('#toolbar-langs button');
-  langButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      langButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+    function showButtons(){
+      document.querySelectorAll('#toolbar-main button').forEach(b=>b.style.display='inline-flex');
+    }
 
-      let lang = btn.id.replace('lang-', '');
-      if(lang === 'js') lang = 'javascript'; // just in case
-      currentLanguage = lang;
+    document.getElementById('btn-run').onclick=()=>{
+      const code=editor.getValue();
+      let content = currentLanguage==='html'? code
+                  : currentLanguage==='css' ? `<style>${code}</style>`
+                  : `<script>${code}<\/script>`;
+      const pf=document.getElementById('result-frame');
+      pf.srcdoc=content; pf.style.display='block';
+      showingPreview=true;
+      editor.layout(); editor.focus();
+      showButtons();
+    };
 
-      editor.setValue(examples[lang] || '');
-      monaco.editor.setModelLanguage(editor.getModel(), lang);
-      document.getElementById('result-frame').style.display = 'none';
-      document.getElementById('btn-hide').style.display = 'none';
-      editor.focus();
+    document.getElementById('btn-hide').onclick=()=>{
+      document.getElementById('result-frame').style.display='none';
+      showingPreview=false;
+      editor.layout(); editor.focus();
+      showButtons();
+    };
+
+    document.getElementById('btn-clear').onclick=()=>{
+      editor.setValue(''); autoSave();
+    };
+
+    document.getElementById('btn-save').onclick=()=>{
+      autoSave(); alert('Saved');
+    };
+
+    document.getElementById('btn-export').onclick=()=>{
+      if(currentLanguage!=='html') return alert('Export only HTML');
+      const blob=new Blob([editor.getValue()],{type:'text/html'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='export.html'; a.click();
+    };
+
+    document.getElementById('btn-select-all').onclick=()=>{
+      editor.setSelection(editor.getModel().getFullModelRange());
+    };
+
+    document.getElementById('btn-toggle').onclick=()=>{
+      showingPreview
+        ? document.getElementById('btn-hide').click()
+        : document.getElementById('btn-run').click();
+    };
+
+    document.querySelectorAll('#toolbar-langs button').forEach(btn=>{
+      btn.onclick=()=>{
+        document.querySelectorAll('#toolbar-langs button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        currentLanguage = btn.id==='lang-js'?'javascript':btn.id.replace('lang-','');
+        monaco.editor.setModelLanguage(editor.getModel(),currentLanguage);
+        editor.setValue(getSaved(currentLanguage));
+        autoSave();
+        if(showingPreview) document.getElementById('btn-run').click();
+      };
     });
-  });
-</script>
+  </script>
 </body>
 </html>
