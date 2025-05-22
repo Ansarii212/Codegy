@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title><span style="color:red">&lt;</span>Codegy<span style="color:red">&gt;</span></title>
-  <link rel="stylesheet" href="vs/editor/editor.main.css" />
+  <title>Codegy – Editor + Preview</title>
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <style>
     html, body {
       margin: 0;
@@ -16,128 +17,293 @@
       font-family: Arial, sans-serif;
       display: flex;
       flex-direction: column;
+      align-items: center;
     }
 
-    #toolbar-main {
+    /* Title */
+    #codegy-title {
+      font-size: 24px;
+      margin: 10px 0 5px 0;
+      color: #fff;
+    }
+    #codegy-title .symbols {
+      color: red;
+      font-weight: bold;
+    }
+
+    /* Toolbars */
+    #toolbar-main, #toolbar-extra, #toolbar-langs {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       background: #2d2d2d;
       padding: 8px 10px;
+      z-index: 10;
       justify-content: center;
-      align-items: center;
+      width: 100%;
     }
 
-    #toolbar-main button {
+    #toolbar-main button,
+    #toolbar-extra button,
+    #toolbar-langs button {
       background: #3a3a3a;
       border: none;
       color: #eee;
       padding: 6px 12px;
       border-radius: 4px;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+      outline: none;
       font-size: 14px;
+    }
+
+    #toolbar-main button:hover,
+    #toolbar-extra button:hover,
+    #toolbar-langs button:hover,
+    #toolbar-langs button.active {
+      background: #575757;
+      color: #fff;
+    }
+
+    /* Editor container */
+    #container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
     }
 
     #editor {
       flex: 1;
-      height: 90vh;
       position: relative;
     }
 
-    .logo-title {
-      font-size: 22px;
-      margin-right: 20px;
-      color: #eee;
+    /* Monaco styling */
+    .monaco-editor,
+    .monaco-editor-background,
+    .margin,
+    .monaco-scrollable-element,
+    .lines-content,
+    .view-lines,
+    .monaco-editor .inputarea.ime-input {
+      border: none !important;
+      box-shadow: none !important;
+      outline: none !important;
+      background: transparent !important;
     }
 
-    .logo-title span {
-      color: red;
+    .monaco-editor {
+      background: #1e1e1e !important;
+    }
+
+    /* Preview */
+    #result-frame {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: white;
+      display: none;
+      z-index: 5;
+    }
+
+    @media (max-width: 600px) {
+      #toolbar-main button,
+      #toolbar-extra button,
+      #toolbar-langs button {
+        font-size: 12px;
+        padding: 5px 8px;
+      }
     }
   </style>
-
-  <!-- تحميل مكتبة Monaco محليًا -->
-  <script>
-    var require = { paths: { vs: "vs" } };
-  </script>
-  <script src="vs/loader.js"></script>
 </head>
 <body>
-  <div id="toolbar-main">
-    <div class="logo-title"><span>&lt;</span>Codegy<span>&gt;</span></div>
-    <button onclick="runCode()">Run</button>
-    <button onclick="copyCode()">Copy</button>
-    <button onclick="pasteCode()">Paste</button>
-    <button onclick="undoCode()">Undo</button>
-    <button onclick="redoCode()">Redo</button>
-    <button onclick="clearCode()">Clear</button>
-    <button onclick="shareCode()">Share</button>
+
+  <div id="codegy-title">
+    <span class="symbols">&lt;</span> Codegy <span class="symbols">/&gt;</span>
   </div>
 
-  <div id="editor"></div>
+  <div id="toolbar-main">
+    <button id="btn-run"><i class="fas fa-play"></i> Run</button>
+    <button id="btn-clear"><i class="fas fa-trash"></i> Clear</button>
+    <button id="btn-save"><i class="fas fa-save"></i> Save</button>
+    <button id="btn-export"><i class="fas fa-file-export"></i> Export</button>
+    <button id="btn-select-all"><i class="fas fa-mouse-pointer"></i> Select All</button>
+  </div>
 
+  <div id="toolbar-extra">
+    <button id="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+    <button id="btn-paste"><i class="fas fa-paste"></i> Paste</button>
+    <button id="btn-undo"><i class="fas fa-undo"></i> Undo</button>
+    <button id="btn-redo"><i class="fas fa-redo"></i> Redo</button>
+    <button id="btn-share"><i class="fas fa-share-alt"></i> Share</button>
+  </div>
+
+  <div id="toolbar-langs">
+    <button id="lang-html" class="active">HTML</button>
+    <button id="lang-css">CSS</button>
+    <button id="lang-js">JavaScript</button>
+  </div>
+
+  <div id="container">
+    <div id="editor"></div>
+    <iframe id="result-frame" sandbox="allow-scripts"></iframe>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
   <script>
-    let editor;
-    let lastValue = "";
+    require.config({ paths:{ vs:'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
+    let editor, currentLanguage = 'html', showingPreview = false;
+    const examples = {
+      html: '<!DOCTYPE html>\n<html><body><h1>Hello HTML!</h1></body></html>',
+      css: 'body{background:lightgray;color:#333;}',
+      javascript: "console.log('Hello JS!');"
+    };
 
-    require(["vs/editor/editor.main"], function () {
-      const saved = localStorage.getItem("codegy_html") || "<!DOCTYPE html>\\n<html><body><h1>Hello Codegy Offline!</h1></body></html>";
-      editor = monaco.editor.create(document.getElementById("editor"), {
-        value: saved,
-        language: "html",
-        theme: "vs-dark",
-        automaticLayout: true
+    function getSaved(lang) {
+      return localStorage.getItem('codegy_' + lang) || examples[lang];
+    }
+
+    function autoSave() {
+      localStorage.setItem('codegy_' + currentLanguage, editor.getValue());
+    }
+
+    require(['vs/editor/editor.main'], () => {
+      editor = monaco.editor.create(document.getElementById('editor'), {
+        value: getSaved(currentLanguage),
+        language: currentLanguage,
+        theme: 'vs-dark',
+        automaticLayout: true,
+        minimap: { enabled: false },
+        mouseWheelZoom: true,
+        quickSuggestions: true,
+        suggestOnTriggerCharacters: true,
+        wordBasedSuggestions: true,
+        contextmenu: false,
+        lineNumbers: 'on',
+        renderLineHighlight: 'none',
+        fontSize: 16
       });
 
-      lastValue = saved;
-
       editor.onDidChangeModelContent(() => {
-        localStorage.setItem("codegy_html", editor.getValue());
+        autoSave();
+        historyStack.push(editor.getValue());
       });
     });
 
-    function runCode() {
+    const historyStack = [], redoStack = [];
+
+    document.getElementById('btn-run').onclick = () => {
       const code = editor.getValue();
-      const preview = window.open("", "_blank");
-      preview.document.open();
-      preview.document.write(code);
-      preview.document.close();
-    }
+      let content = currentLanguage === 'html' ? code
+                  : currentLanguage === 'css' ? `<style>${code}</style>`
+                  : `<script>${code}<\/script>`;
+      const pf = document.getElementById('result-frame');
+      pf.srcdoc = content;
+      pf.style.display = showingPreview ? 'none' : 'block';
+      showingPreview = !showingPreview;
+      editor.focus();
+      document.getElementById('btn-run').innerHTML = showingPreview
+        ? '<i class="fas fa-code"></i> Code'
+        : '<i class="fas fa-play"></i> Run';
+    };
 
-    function copyCode() {
-      navigator.clipboard.writeText(editor.getValue()).then(() => alert("Copied!"));
-    }
-
-    function pasteCode() {
-      navigator.clipboard.readText().then(text => editor.setValue(text));
-    }
-
-    function undoCode() {
-      editor.trigger("keyboard", "undo", null);
-    }
-
-    function redoCode() {
-      editor.trigger("keyboard", "redo", null);
-    }
-
-    function clearCode() {
-      if (confirm("Are you sure you want to clear the code?")) {
-        lastValue = editor.getValue();
-        editor.setValue("");
+    document.getElementById('btn-clear').onclick = () => {
+      if (confirm('Are you sure you want to clear the code?')) {
+        historyStack.push(editor.getValue());
+        editor.setValue('');
+        autoSave();
       }
-    }
+    };
 
-    function shareCode() {
+    document.getElementById('btn-save').onclick = () => {
+      if (confirm('Do you want to save this code as .txt?')) {
+        const blob = new Blob([editor.getValue()], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `codegy_${currentLanguage}.txt`;
+        a.click();
+      }
+    };
+
+    document.getElementById('btn-export').onclick = () => {
+      if (currentLanguage !== 'html') return alert('Export only works with HTML!');
+      const blob = new Blob([editor.getValue()], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'export.html';
+      a.click();
+    };
+
+    document.getElementById('btn-select-all').onclick = () => {
+      editor.setSelection(editor.getModel().getFullModelRange());
+    };
+
+    document.getElementById('btn-copy').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(editor.getValue());
+        alert('Code copied!');
+      } catch (err) {
+        alert('Copy failed!');
+      }
+    };
+
+    document.getElementById('btn-paste').onclick = async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        editor.trigger('keyboard', 'type', { text });
+      } catch (err) {
+        alert('Paste failed!');
+      }
+    };
+
+    document.getElementById('btn-undo').onclick = () => {
+      if (historyStack.length > 0) {
+        redoStack.push(editor.getValue());
+        editor.setValue(historyStack.pop());
+      }
+    };
+
+    document.getElementById('btn-redo').onclick = () => {
+      if (redoStack.length > 0) {
+        historyStack.push(editor.getValue());
+        editor.setValue(redoStack.pop());
+      }
+    };
+
+    document.getElementById('btn-share').onclick = () => {
       const text = editor.getValue();
       if (navigator.share) {
         navigator.share({
-          title: "Codegy",
-          text: text,
-          url: window.location.href
-        }).catch(err => alert("Sharing failed: " + err));
+          title: 'Codegy Snippet',
+          text,
+        }).catch(err => console.error(err));
       } else {
-        alert("Sharing not supported on this browser.");
+        alert('Sharing not supported on this device.');
       }
-    }
+    };
+
+    document.querySelectorAll('#toolbar-langs button').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('#toolbar-langs button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const lang = btn.textContent.toLowerCase();
+        currentLanguage = lang;
+        const value = localStorage.getItem('codegy_' + lang) || examples[lang];
+        editor.setValue(value);
+        monaco.editor.setModelLanguage(editor.getModel(), lang === 'javascript' ? 'javascript' : lang);
+        autoSave();
+        editor.focus();
+      };
+    });
   </script>
 </body>
 </html>
